@@ -114,7 +114,6 @@ python config.py
 ## 目录结构
 
 ```
-d:\code\wnacg\
 ├── config.py           # 配置文件（支持自动登录）
 ├── search_id.py        # 搜索工具
 ├── get_shelf_info.py   # 收藏夹获取

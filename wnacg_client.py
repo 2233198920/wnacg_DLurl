@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 API_DOMAIN = "www.wnacg.com"
 
 # 可以直接在这里设置 cookie，如果为空则使用环境变量
-WNACG_COOKIE = "_ym_uid=1733220519349694624; _ym_d=1733220519; cf_clearance=eBvExRGla0FdDwnmQGuMytjcdWrCvznPx3wCMv7Gkh4-1743696552-1.2.1.1-XaEN1p9L2YVmDy6HHyNu9A.MODRDezlyZSLD8fmA38LFF5AJ.kGwguXVArwtDQAfmltXpMQa8ItQfIBtOSrSATm7fxzx1zNAJsFrkWlhCtKsNmrkcEwMxz3GQkaFtEbXlbzSVkJJaP5j9jXwGetfAmjN8p6S1kyUI.7Oc74S9pvAL6QoA1HPlHLEcJ2aiuUoiZxWRYLh24pmqDB4zsFnk8CBuwZlpB2PAsRVXhaeNecBN562SemtqRP53zzSr9nXExjzd7xdOv2rQyas28kvIO_TU4QgCMZBsClEE2_PjrsKkbd7E3sBB2zTjzG18rQq9YuTItFu.bUnXIC9RmQd17_eAlxYQh6.j5_UNwCQx4fNRp9htXuSWx.tdvi9U9Vv; MPIC_bnS5=ddb3ppqJ5Q1spcMqFKFSQPAeXaGp6PrHQR%2FrJk6%2FnbqTxvHf44JFirSw%2BWgXc5pXYoES3RCIJLfkWani4QSdL9FzvnY"
+WNACG_COOKIE = ""
 
 @dataclass
 class Shelf:

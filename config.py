@@ -2,19 +2,20 @@
 WNACG 工具配置文件
 在这里统一管理Cookie、域名等配置信息
 """
+import requests
+import os
 
 # API域名配置
 API_DOMAIN = "www.wnacg01.cc"
 
-# Cookie配置 - 请在这里填入你的Cookie
-# 获取方法：
-# 1. 登录 www.wnacg01.cc
-# 2. 打开浏览器开发者工具 (F12)
-# 3. 进入 Network 选项卡
-# 4. 刷新页面
-# 5. 找到任意一个请求，查看 Request Headers 中的 Cookie
-# 6. 复制完整的Cookie字符串到下方
-WNACG_COOKIE = "_ym_uid=1733220519349694624; _ym_d=1733220519; cf_clearance=eBvExRGla0FdDwnmQGuMytjcdWrCvznPx3wCMv7Gkh4-1743696552-1.2.1.1-XaEN1p9L2YVmDy6HHyNu9A.MODRDezlyZSLD8fmA38LFF5AJ.kGwguXVArwtDQAfmltXpMQa8ItQfIBtOSrSATm7fxzx1zNAJsFrkWlhCtKsNmrkcEwMxz3GQkaFtEbXlbzSVkJJaP5j9jXwGetfAmjN8p6S1kyUI.7Oc74S9pvAL6QoA1HPlHLEcJ2aiuUoiZxWRYLh24pmqDB4zsFnk8CBuwZlpB2PAsRVXhaeNecBN562SemtqRP53zzSr9nXExjzd7xdOv2rQyas28kvIO_TU4QgCMZBsClEE2_PjrsKkbd7E3sBB2zTjzG18rQq9YuTItFu.bUnXIC9RmQd17_eAlxYQh6.j5_UNwCQx4fNRp9htXuSWx.tdvi9U9Vv; MPIC_bnS5=ddb3ppqJ5Q1spcMqFKFSQPAeXaGp6PrHQR%2FrJk6%2FnbqTxvHf44JFirSw%2BWgXc5pXYoES3RCIJLfkWani4QSdL9FzvnY"
+# 登录配置 - 请在这里填入你的登录信息
+LOGIN_CONFIG = {
+    "username": "",  # 你的用户名
+    "password": "",  # 你的密码
+}
+
+# Cookie配置 - 可以手动填入，也可以留空让程序自动获取
+WNACG_COOKIE = ""
 
 # 请求配置
 REQUEST_CONFIG = {
@@ -40,18 +41,78 @@ SEARCH_CONFIG = {
     "page_size": 24,  # 每页结果数
 }
 
-def get_cookie():
-    """获取Cookie，优先从配置文件，然后从环境变量"""
-    import os
+def _login_and_get_cookie(username: str = None, password: str = None) -> str:
+    """登录 WNACG 并获取 cookie"""
+    # 如果没有提供用户名密码，从配置文件获取
+    if username is None or password is None:
+        username, password = get_login_config()
     
+    data = {
+        "login_name": username,
+        "login_pass": password,
+    }
+    headers = get_headers()
+
+    print(f"正在登录 {API_DOMAIN}...")
+    
+    # 发送登录请求
+    resp = requests.post(f"https://{API_DOMAIN}/users-check_login.html",
+                         data=data, headers=headers)
+    if resp.status_code != 200:
+        raise RuntimeError(f"登录请求失败，状态码: {resp.status_code}")
+
+    # 解析 JSON，检查 ret 字段
+    login_resp = resp.json()
+    if not login_resp.get("ret"):
+        raise RuntimeError(f"登录失败: {login_resp}")
+
+    # 从响应头获取 cookie
+    cookie = resp.headers.get("set-cookie")
+    if not cookie:
+        raise RuntimeError(f"响应中没有找到cookie: {login_resp}")
+
+    print("✓ 登录成功，已获取cookie")
+    return cookie
+
+def get_cookie():
+    """获取Cookie，优先级：配置文件 > 环境变量 > 自动登录获取"""
+    
+    # 1. 优先使用配置文件中的cookie
     if WNACG_COOKIE:
         return WNACG_COOKIE
     
+    # 2. 尝试从环境变量获取
     env_cookie = os.environ.get('WNACG_COOKIE')
     if env_cookie:
         return env_cookie
     
-    raise ValueError('请在config.py中设置WNACG_COOKIE或设置WNACG_COOKIE环境变量')
+    # 3. 自动登录获取cookie
+    try:
+        print("配置文件和环境变量中都没有找到cookie，尝试自动登录获取...")
+        cookie = _login_and_get_cookie()
+        
+        # 提示用户可以将cookie保存到配置文件中
+        print("\n" + "="*50)
+        print("建议将以下cookie复制到config.py的WNACG_COOKIE变量中，避免频繁登录：")
+        print(f'WNACG_COOKIE = "{cookie}"')
+        print("="*50 + "\n")
+        
+        return cookie
+    except Exception as e:
+        raise ValueError(f'无法获取cookie: {e}')
+
+def get_login_config():
+    """获取登录配置"""
+    import os
+    
+    # 优先从环境变量获取
+    username = os.environ.get('WNACG_USERNAME') or LOGIN_CONFIG.get('username')
+    password = os.environ.get('WNACG_PASSWORD') or LOGIN_CONFIG.get('password')
+    
+    if not username or not password:
+        raise ValueError('请在config.py中设置LOGIN_CONFIG或设置环境变量WNACG_USERNAME和WNACG_PASSWORD')
+    
+    return username, password
 
 def get_headers(referer=None):
     """获取标准请求头"""
@@ -84,10 +145,19 @@ def validate_config():
     if not API_DOMAIN:
         errors.append("API_DOMAIN 不能为空")
     
+    # 验证登录配置
     try:
-        get_cookie()
+        get_login_config()
     except ValueError as e:
         errors.append(str(e))
+    
+    # 验证cookie获取（这里不实际获取，只检查配置）
+    if not WNACG_COOKIE and not os.environ.get('WNACG_COOKIE'):
+        try:
+            get_login_config()  # 确保可以登录获取
+            print("⚠ 将使用自动登录获取cookie")
+        except ValueError:
+            errors.append("无法获取cookie：既没有配置cookie，也没有配置登录信息")
     
     if errors:
         print("配置错误:")
@@ -100,7 +170,14 @@ def validate_config():
 if __name__ == "__main__":
     print("=== WNACG 配置文件检查 ===")
     print(f"API域名: {API_DOMAIN}")
-    print(f"Cookie长度: {len(get_cookie()) if get_cookie() else 0} 字符")
+    
+    try:
+        cookie = get_cookie()
+        print(f"Cookie长度: {len(cookie)} 字符")
+        print("✓ Cookie获取成功")
+    except Exception as e:
+        print(f"✗ Cookie获取失败: {e}")
+    
     print(f"搜索结果目录: {DIRECTORIES['search_results']}")
     print(f"下载链接目录: {DIRECTORIES['downloads']}")
     
